@@ -1,0 +1,112 @@
+---
+title: "Análise da Performance de Estudantes"
+subtitle: "Aplicação da Regressão Linear em um Banco de dados real"
+author: "Rafael Jordane de Souza Oliveira"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+output: html_document
+---
+
+# Introdução sobre o Banco de Dados
+
+O banco de dados **Student_Performance.csv** foi construído com a intenção de examinar os fatores que influenciam a performance academica dos estudantes. Ele contém registros de 10.000 estudante, que contém informações sobre 6 variáveis que influenciam no rendimento cada um. As variáveis do banco de dados são a quantidade de horas de estudo, notas antigas, participação em atividades extracurriculares, horas de sono do aluno, exercícios resolvidos, e por fim, o índice de performance do aluno. Para fazer uma análise de **regressão linear simples**, no presente trabalho levaremos em conta apenas as variáveis **"notas antigas"** e **"índice de performance do aluno"** sendo o índice a variável de respostas e as notas antigas a covariável. O banco de dados está disponível na plataforma Kaggle para livre acesso e pode ser acessado através do link disponível nas Referências Bibliográficas.
+
+# Análise dos dados
+
+## Análises descritivas das variáveis de interesse
+
+Para obter um melhor entendimento do banco de dados que estamos trabalhando, o primeiro passo a ser feito é uma análise descritiva das variáveis que serão relacionadas. As medidas resumo das variáveis estão dispostas na Tabela 1, e na Figura 1 e Figura 2.
+
+```{r Livrarias, message=FALSE, warning=FALSE, include=FALSE}
+library(kableExtra)
+library(knitr)
+library(tidyverse)
+library(MASS)
+library(dplyr)
+
+```
+
+```{r Banco, include=FALSE}
+#Rodando o Banco
+
+estud <- read.csv("Student_Performance.csv")
+
+estud <- estud %>%
+  rename(nota.antiga = Previous.Scores, ind.perf = Performance.Index)
+
+attach(estud)
+
+```
+
+#### Tabela 1: Medidas-resumo: ind de performance e notas antigas
+
+------------------------------------------------------------------------
+
+```{r echo=FALSE}
+##Medidas Resumo
+
+resumo.perf <- summary(ind.perf)
+resumo.nota <- summary(nota.antiga)
+dp.perf <- sd(ind.perf)
+dp.perf <- sd(nota.antiga)
+
+resumogeral.df <- data.frame(
+  variavel = c("ind performance", "notas antigas"),
+  min = c(10.00, 40.00),
+  Q1 = c(40.00, 54.00),
+  mediana = c(55.00, 69.00),
+  media = c(55.22, 69.45),
+  Q3 = c(71.00, 85.00),
+  max = c(100.00, 99.00),
+  dp = c(19.21, 17.34)
+)
+
+# Gerando a tabela
+kable(resumogeral.df, col.names = c("Variável", "Min.", "1º Quartil", "Mediana", "Média", "3º Quartil", "Máx.", "d.p.")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+
+```
+
+```{r echo=FALSE}
+### Obtendo a densidade
+
+par(new=F, mfrow=c(1,1))
+plot(fdp.perf<-density(ind.perf), xlab="Índice de Peformance", ylab="", main="Densidade do Índice de Performance")
+polygon(fdp.perf, col="lightblue")
+```
+
+------------------------------------------------------------------------
+
+#### Figura 1: Gráfico da função de densidade da variável ind de performance
+
+```{r echo=FALSE}
+### Obtendo os box-plots
+
+par(new=F, mfrow=c(1,2))
+boxplot(ind.perf, main="Boxplot do Ind de Performance",ylab="Ind de Performance", col="lightgreen")
+boxplot(nota.antiga, main="Boxplot de Notas antigas",xlab="", ylab="Notas Antigas", col="lightyellow")
+
+
+
+```
+
+------------------------------------------------------------------------
+
+#### Figura 2: Boxplots das variáveis índice de performance e notas antigas.
+
+Analisando os dados fornecidos pela Tabela 1, podemos perceber que em ambas as variáveis, os dados se dispõe de maneira relativamente simétrica, com distancia interquartil similar para cada variável. Embora possa parecer alta, a variabilidade do indice de performance e das notas antigas dos alunos segue o padrão esperado para esse tipo de variável. O desvio padrão acentuado indica que as observações se encontram espaçadas em relação a média, o que sugere um achatamento da curva se gerado um gráfico para a densidade de probabilidade das variáveis. Esse comportamento na variável índice de performance pode ser visualizado na Figura 1. Não há *outliers* nos *boxplots* gerados na Figura 2 e o comportamento deles reforça as constatações em relação à simetria na dispersão dos dados.
+
+## Análises de Regressão Linear entre as variáveis
+
+Para investigar como as notas antigas podem interferir no índice de performance dos alunos o primeiro passo é estudar a correlação das variáveis. Essa análise pode ser ilustrada em um gráfico de dispersão que cruze as variáveis (Figura 3).
+
+```{r echo=FALSE}
+plot(nota.antiga, ind.perf, pch=16
+     ,main="Dispersão ind de performance x notas antigas")
+
+```
+
+------------------------------------------------------------------------
+
+#### Figura 3: Gráfico de dispersão: Índice de Performance x Notas antigas
+
+A correlação linear de *Pearson* entre as variáveis é $0.915$, valor que indica alta correlação positiva. Além disso, observando a FIgura 3, nota-se que é aparente a linearidade entre o crescimento das notas antigas dos alunos e seus índices de performance. Os alunos que obtiveram baixa média nos anos anteriores geralmente apresentavam baixo rendimento e o inverso também ocorre. Podemos visualizar também um indício de alta variabilidade nos valores do índice de performance para cada valor de nota antiga pela grossura da linha formada pelas observações.
